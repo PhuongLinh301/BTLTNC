@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Forms;
 
-namespace QuanLySinhVienApp
+namespace CalculatorApp
 {
     public partial class Form1 : Form
     {
