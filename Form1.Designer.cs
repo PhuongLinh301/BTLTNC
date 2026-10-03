@@ -1,4 +1,4 @@
-﻿namespace QuanLySinhVienApp
+﻿namespace CalculatorApp
 {
     partial class Form1
     {
