@@ -36,11 +36,11 @@ public class SinhVienBUL
             sv.Diem = Math.Round(sv.Diem, 1, MidpointRounding.AwayFromZero);
         var ketQua = sv.LayLoiValidation();
 
-        if (sv.LopHoc != null)
+        if (!string.IsNullOrEmpty(sv.MaLop))
         {
-            LopHoc? lop = lopBus.TimTheoMa(sv.LopHoc.MaLop);
+            LopHoc? lop = lopBus.TimTheoMa(sv.MaLop);
             if (lop == null)
-                ketQua.Add(new ValidationResult("Lớp học không tồn tại.", new[] { nameof(SinhVien.LopHoc) }));
+                ketQua.Add(new ValidationResult("Lớp học không tồn tại.", new[] { nameof(SinhVien.MaLop) }));
             else
                 sv.LopHoc = lop;
         }
@@ -96,10 +96,11 @@ public class SinhVienBUL
     {
         tuKhoa = tuKhoa.Trim();
         return dal.LayDanhSach().Where(sv =>
-            (sv.MaSV.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
+            (string.IsNullOrEmpty(tuKhoa)
+             || sv.MaSV.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
              || sv.HoTen.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
              || sv.Email.Contains(tuKhoa, StringComparison.OrdinalIgnoreCase)
-             || sv.DienThoai.Contains(tuKhoa))
+             || (sv.DienThoai ?? "").Contains(tuKhoa, StringComparison.OrdinalIgnoreCase))
             && (string.IsNullOrEmpty(maLop) || string.Equals(sv.MaLop, maLop, StringComparison.OrdinalIgnoreCase))
             && sv.Diem >= diemTu).ToList();
     }

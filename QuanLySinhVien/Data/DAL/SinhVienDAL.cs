@@ -1,104 +1,144 @@
+using MySql.Data.MySqlClient;
 using QuanLySinhVien.Data.Entity;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace QuanLySinhVien.Data.DAL
 {
     public class SinhVienDAL
     {
-        private readonly List<SinhVien> sinhViens = new();
+        public SinhVienDAL() { }
 
-        public SinhVienDAL()
-        {
-            sinhViens.Add(new SinhVien
-            {
-                MaSV = "SV000001",
-                HoTen = "Nguyen Van A",
-                NgaySinh = new DateTime(2000, 1, 1),
-                GioiTinh = "Nam",
-                Email = "a@gmail.com",
-                DienThoai = "0901234567",
-                Diem = 8.5,
-                MaLop = "Lop 1",
-                TrangThai = "Đang học"
-            });
-            sinhViens.Add(new SinhVien
-            {
-                MaSV = "SV000002",
-                HoTen = "Tran Thi B",
-                NgaySinh = new DateTime(2001, 2, 2),
-                GioiTinh = "Nữ",
-                Email = "b@gmail.com",
-                DienThoai = "0901234568",
-                Diem = 7.0,
-                MaLop = "Lop 2",
-                TrangThai = "Đang học"
-            });
-            sinhViens.Add(new SinhVien
-            {
-                MaSV = "SV000003",
-                HoTen = "Le Van C",
-                NgaySinh = new DateTime(2002, 3, 3),
-                GioiTinh = "Nam",
-                Email = "c@gmail.com",
-                DienThoai = "0901234569",
-                Diem = 9.0,
-                MaLop = "Lop 1",
-                TrangThai = "Đang học"
-            });
-        }
+        public SinhVienDAL(LopHoc? lop) { }
 
-        public SinhVienDAL(LopHoc? lop) : this()
+        public List<SinhVien> GetAllSinhVien() => LayDanhSach();
+
+        public List<SinhVien> LayDanhSach()
         {
-            if (lop != null && sinhViens.Count > 0)
+            var ds = new List<SinhVien>();
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = @"SELECT sv.MaSV, sv.HoTen, sv.NgaySinh, sv.GioiTinh, sv.Email, 
+                                        sv.DienThoai, sv.Diem, sv.MaLop, sv.TrangThai, l.TenLop
+                                 FROM SinhVien sv
+                                 LEFT JOIN LopHoc l ON sv.MaLop = l.MaLop
+                                 ORDER BY sv.MaSV";
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
             {
-                sinhViens[0].LopHoc = lop;
+                var sv = DocSinhVien(reader);
+                ds.Add(sv);
             }
+            return ds;
         }
-
-        public List<SinhVien> GetAllSinhVien() => sinhViens.ToList();
-        public List<SinhVien> LayDanhSach() => sinhViens.ToList();
 
         public SinhVien? GetSinhVienById(string maSV) => TimTheoMa(maSV);
+
         public SinhVien? TimTheoMa(string maSV)
         {
-            return sinhViens.FirstOrDefault(s => string.Equals(s.MaSV, maSV, StringComparison.OrdinalIgnoreCase));
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = @"SELECT sv.MaSV, sv.HoTen, sv.NgaySinh, sv.GioiTinh, sv.Email, 
+                                        sv.DienThoai, sv.Diem, sv.MaLop, sv.TrangThai, l.TenLop
+                                 FROM SinhVien sv
+                                 LEFT JOIN LopHoc l ON sv.MaLop = l.MaLop
+                                 WHERE sv.MaSV = @MaSV";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@MaSV", maSV);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return DocSinhVien(reader);
+            }
+            return null;
         }
 
         public void AddSinhVien(SinhVien sv) => Them(sv);
+
         public void Them(SinhVien sv)
         {
-            sinhViens.Add(sv);
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = @"INSERT INTO SinhVien (MaSV, HoTen, NgaySinh, GioiTinh, Email, DienThoai, Diem, MaLop, TrangThai)
+                                 VALUES (@MaSV, @HoTen, @NgaySinh, @GioiTinh, @Email, @DienThoai, @Diem, @MaLop, @TrangThai)";
+            using var cmd = new MySqlCommand(sql, conn);
+            GanThamSo(cmd, sv);
+
+            cmd.ExecuteNonQuery();
         }
 
         public bool UpdateSinhVien(SinhVien sv)
         {
-            var svToUpdate = TimTheoMa(sv.MaSV);
-            if (svToUpdate != null)
-            {
-                Sua(svToUpdate, sv);
-                return true;
-            }
-            return false;
+            Sua(sv, sv);
+            return true;
         }
 
         public void Sua(SinhVien cu, SinhVien moi)
         {
-            cu.HoTen = moi.HoTen;
-            cu.NgaySinh = moi.NgaySinh;
-            cu.GioiTinh = moi.GioiTinh;
-            cu.Email = moi.Email;
-            cu.DienThoai = moi.DienThoai;
-            cu.Diem = moi.Diem;
-            cu.MaLop = moi.MaLop;
-            cu.TrangThai = moi.TrangThai;
-            cu.LopHoc = moi.LopHoc;
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = @"UPDATE SinhVien 
+                                 SET HoTen = @HoTen, NgaySinh = @NgaySinh, GioiTinh = @GioiTinh,
+                                     Email = @Email, DienThoai = @DienThoai, Diem = @Diem, 
+                                     MaLop = @MaLop, TrangThai = @TrangThai
+                                 WHERE MaSV = @MaSV";
+            using var cmd = new MySqlCommand(sql, conn);
+            GanThamSo(cmd, moi);
+
+            cmd.ExecuteNonQuery();
         }
 
         public void Xoa(SinhVien sv)
         {
-            sinhViens.Remove(sv);
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = "DELETE FROM SinhVien WHERE MaSV = @MaSV";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@MaSV", sv.MaSV);
+
+            cmd.ExecuteNonQuery();
+        }
+
+        private static SinhVien DocSinhVien(MySqlDataReader reader)
+        {
+            string maLop = reader.GetString("MaLop");
+            string tenLop = reader.IsDBNull(reader.GetOrdinal("TenLop")) ? "" : reader.GetString("TenLop");
+
+            return new SinhVien
+            {
+                MaSV = reader.GetString("MaSV"),
+                HoTen = reader.GetString("HoTen"),
+                NgaySinh = reader.GetDateTime("NgaySinh"),
+                GioiTinh = reader.GetString("GioiTinh"),
+                Email = reader.GetString("Email"),
+                DienThoai = reader.IsDBNull(reader.GetOrdinal("DienThoai")) ? "" : reader.GetString("DienThoai"),
+                Diem = reader.GetDouble("Diem"),
+                MaLop = maLop,
+                TenLop = tenLop,
+                TrangThai = reader.GetString("TrangThai"),
+                LopHoc = new LopHoc(maLop, tenLop)
+            };
+        }
+
+        private static void GanThamSo(MySqlCommand cmd, SinhVien sv)
+        {
+            cmd.Parameters.AddWithValue("@MaSV", sv.MaSV);
+            cmd.Parameters.AddWithValue("@HoTen", sv.HoTen);
+            cmd.Parameters.AddWithValue("@NgaySinh", sv.NgaySinh.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@GioiTinh", sv.GioiTinh);
+            cmd.Parameters.AddWithValue("@Email", sv.Email);
+            cmd.Parameters.AddWithValue("@DienThoai", string.IsNullOrEmpty(sv.DienThoai) ? DBNull.Value : sv.DienThoai);
+            cmd.Parameters.AddWithValue("@Diem", sv.Diem);
+            cmd.Parameters.AddWithValue("@MaLop", sv.MaLop);
+            cmd.Parameters.AddWithValue("@TrangThai", sv.TrangThai);
         }
     }
 }

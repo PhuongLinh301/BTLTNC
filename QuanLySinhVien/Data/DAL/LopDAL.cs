@@ -1,49 +1,92 @@
+using MySql.Data.MySqlClient;
 using QuanLySinhVien.Data.Entity;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace QuanLySinhVien.Data.DAL
 {
     public class LopDAL
     {
-        private readonly List<LopHoc> lopHocs = new();
+        public List<LopHoc> GetAllLopHoc() => LayDanhSach();
 
-        public LopDAL()
+        public List<LopHoc> LayDanhSach()
         {
-            lopHocs.Add(new LopHoc
-            {
-                MaLop = "Lop 1",
-                TenLop = "Lớp 1"
-            });
-            lopHocs.Add(new LopHoc
-            {
-                MaLop = "Lop 2",
-                TenLop = "Lớp 2"
-            });
-        }
+            var ds = new List<LopHoc>();
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
 
-        public List<LopHoc> GetAllLopHoc() => lopHocs.ToList();
-        public List<LopHoc> LayDanhSach() => lopHocs.ToList();
+            const string sql = "SELECT MaLop, TenLop FROM LopHoc ORDER BY MaLop";
+            using var cmd = new MySqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                ds.Add(new LopHoc
+                {
+                    MaLop = reader.GetString("MaLop"),
+                    TenLop = reader.GetString("TenLop")
+                });
+            }
+            return ds;
+        }
 
         public LopHoc? TimTheoMa(string maLop)
         {
-            return lopHocs.FirstOrDefault(l => string.Equals(l.MaLop, maLop, StringComparison.OrdinalIgnoreCase));
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = "SELECT MaLop, TenLop FROM LopHoc WHERE MaLop = @MaLop";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@MaLop", maLop);
+
+            using var reader = cmd.ExecuteReader();
+            if (reader.Read())
+            {
+                return new LopHoc
+                {
+                    MaLop = reader.GetString("MaLop"),
+                    TenLop = reader.GetString("TenLop")
+                };
+            }
+            return null;
         }
 
         public void Them(LopHoc lop)
         {
-            lopHocs.Add(lop);
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = "INSERT INTO LopHoc (MaLop, TenLop) VALUES (@MaLop, @TenLop)";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@MaLop", lop.MaLop);
+            cmd.Parameters.AddWithValue("@TenLop", lop.TenLop);
+
+            cmd.ExecuteNonQuery();
         }
 
         public void Sua(LopHoc cu, LopHoc moi)
         {
-            cu.TenLop = moi.TenLop;
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = "UPDATE LopHoc SET TenLop = @TenLop WHERE MaLop = @MaLop";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@TenLop", moi.TenLop);
+            cmd.Parameters.AddWithValue("@MaLop", cu.MaLop);
+
+            cmd.ExecuteNonQuery();
         }
 
         public void Xoa(LopHoc lop)
         {
-            lopHocs.Remove(lop);
+            using var conn = DatabaseHelper.GetConnection();
+            conn.Open();
+
+            const string sql = "DELETE FROM LopHoc WHERE MaLop = @MaLop";
+            using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@MaLop", lop.MaLop);
+
+            cmd.ExecuteNonQuery();
         }
     }
 }
