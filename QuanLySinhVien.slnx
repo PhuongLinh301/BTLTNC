@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="QuanLySinhVien/QuanLySinhVien.csproj" />
+  <Project Path="QuanLyThuVienDAO/QuanLyThuVienDAO.csproj" Id="d0d2d209-35cb-4173-b1e7-dcd19a3eb2e2" />
 </Solution>
